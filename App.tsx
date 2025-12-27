@@ -10,45 +10,27 @@ import Habits from './components/Habits';
 import Goals from './components/Goals';
 import Stats from './components/Stats';
 import Settings from './components/Settings';
-import { AppState, ViewType, Task, Priority, Status, Habit } from './types';
+import { AppState, ViewType, Task, Priority, Status, Habit, Goal } from './types';
 
 const INITIAL_STATE: AppState = {
   tasks: [
     {
       id: '1',
-      title: 'Design MindFlow Landing Page',
-      description: 'Create high-fidelity mockups for the landing page.',
+      title: 'Explore MindFlow AI Features',
+      description: 'Check out the task manager, habit tracker, and AI chat.',
       priority: Priority.HIGH,
       status: Status.TODO,
       dueDate: new Date().toISOString(),
-      estimatedMinutes: 120,
-      category: 'Design'
-    },
-    {
-      id: '2',
-      title: 'Integration Gemini API',
-      description: 'Implement task parsing and productivity suggestions.',
-      priority: Priority.MEDIUM,
-      status: Status.IN_PROGRESS,
-      dueDate: new Date().toISOString(),
-      estimatedMinutes: 90,
-      category: 'Engineering'
+      estimatedMinutes: 30,
+      category: 'Onboarding'
     }
   ],
   habits: [
     {
       id: 'h1',
-      name: 'Morning Meditation',
+      name: 'Drink Water',
       frequency: 'Daily',
-      streak: 12,
-      completedToday: true,
-      history: {}
-    },
-    {
-      id: 'h2',
-      name: 'Coding Practice',
-      frequency: 'Daily',
-      streak: 5,
+      streak: 0,
       completedToday: false,
       history: {}
     }
@@ -56,19 +38,23 @@ const INITIAL_STATE: AppState = {
   goals: [
     {
       id: 'g1',
-      title: 'Learn AI App Development',
-      targetDate: '2024-12-31',
-      progress: 65,
+      title: 'Master Productivity',
+      targetDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      progress: 10,
       subtasks: []
     }
   ],
-  productivityScore: 82
+  productivityScore: 50
 };
 
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>(() => {
     const saved = localStorage.getItem('mindflow_state');
-    return saved ? JSON.parse(saved) : INITIAL_STATE;
+    try {
+      return saved ? JSON.parse(saved) : INITIAL_STATE;
+    } catch (e) {
+      return INITIAL_STATE;
+    }
   });
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
 
@@ -76,6 +62,7 @@ const App: React.FC = () => {
     localStorage.setItem('mindflow_state', JSON.stringify(state));
   }, [state]);
 
+  // Task Handlers
   const addTask = (task: Task) => {
     setState(prev => ({ ...prev, tasks: [task, ...prev.tasks] }));
   };
@@ -94,12 +81,21 @@ const App: React.FC = () => {
     }));
   };
 
+  // Habit Handlers
   const toggleHabit = (id: string) => {
     setState(prev => ({
       ...prev,
-      habits: prev.habits.map(h => 
-        h.id === id ? { ...h, completedToday: !h.completedToday, streak: h.completedToday ? h.streak - 1 : h.streak + 1 } : h
-      )
+      habits: prev.habits.map(h => {
+        if (h.id === id) {
+          const isCompleting = !h.completedToday;
+          return { 
+            ...h, 
+            completedToday: isCompleting, 
+            streak: isCompleting ? h.streak + 1 : Math.max(0, h.streak - 1) 
+          };
+        }
+        return h;
+      })
     }));
   };
 
@@ -115,6 +111,33 @@ const App: React.FC = () => {
     setState(prev => ({ ...prev, habits: [...prev.habits, newHabit] }));
   };
 
+  const deleteHabit = (id: string) => {
+    setState(prev => ({ ...prev, habits: prev.habits.filter(h => h.id !== id) }));
+  };
+
+  // Goal Handlers
+  const addGoal = (title: string, date: string) => {
+    const newGoal: Goal = {
+      id: crypto.randomUUID(),
+      title,
+      targetDate: date,
+      progress: 0,
+      subtasks: []
+    };
+    setState(prev => ({ ...prev, goals: [newGoal, ...prev.goals] }));
+  };
+
+  const deleteGoal = (id: string) => {
+    setState(prev => ({ ...prev, goals: prev.goals.filter(g => g.id !== id) }));
+  };
+
+  const updateGoalProgress = (id: string, progress: number) => {
+    setState(prev => ({
+      ...prev,
+      goals: prev.goals.map(g => g.id === id ? { ...g, progress } : g)
+    }));
+  };
+
   const renderContent = () => {
     switch (activeView) {
       case 'dashboard':
@@ -124,9 +147,9 @@ const App: React.FC = () => {
       case 'calendar':
         return <Calendar tasks={state.tasks} />;
       case 'habits':
-        return <Habits habits={state.habits} onToggleHabit={toggleHabit} onAddHabit={addHabit} />;
+        return <Habits habits={state.habits} onToggleHabit={toggleHabit} onAddHabit={addHabit} onDeleteHabit={deleteHabit} />;
       case 'goals':
-        return <Goals goals={state.goals} />;
+        return <Goals goals={state.goals} onAddGoal={addGoal} onDeleteGoal={deleteGoal} onUpdateProgress={updateGoalProgress} />;
       case 'stats':
         return <Stats state={state} />;
       case 'focus':
