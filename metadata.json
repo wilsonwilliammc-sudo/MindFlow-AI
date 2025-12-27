@@ -1,0 +1,7 @@
+{
+  "name": "MindFlow AI - Ultimate Productivity Suite",
+  "description": "A comprehensive AI-powered productivity platform to manage tasks, time, habits, and goals with intelligent insights and automation.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
